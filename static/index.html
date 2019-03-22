@@ -127,9 +127,11 @@ function addEntity(entity, data) {
     drawNextFrame(); // (but should we?)
     //XXX: send a Request that updates the entity you just modified!
     // socket.send({'hello':'mate'});
-    data['name'] = entity
-    socket.send(JSON.stringify(data));
-    // debug(entity);
+    // data['name'] = entity
+    debug(entity);
+    packet = {}
+    packet[entity] = data
+    socket.send(JSON.stringify(packet));
 
     // reference
     // var url = "../entity/"+entity;
@@ -276,8 +278,10 @@ function wsSetup() {
         try {
             // debug("WebSocket Recv:" + msg.data);
             //XXX: TODO What are you going to do here?
-            var returned = JSON.parse(msg.data);
-            world[returned['name']] = returned;
+            var server_packet = JSON.parse(msg.data);
+            // world[returned['name']] = returned;
+            let key = Object.keys(server_packet)[0];
+            world[key] = server_packet[key];
             drawNextFrame();
             drawFrame();
         } catch (e) {

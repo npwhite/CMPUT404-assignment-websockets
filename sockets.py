@@ -108,9 +108,12 @@ def read_ws(ws,client):
             # print("WS RECV: %s" % msg)
             if (msg is not None):
                 packet = json.loads(msg)
+                print(packet)
                 # name = packet.pop('name')
                 # world[name] = packet
-                myWorld.set(packet['name'], packet)
+                # myWorld.set(packet['name'], packet)
+                key = list(packet.keys())[0]
+                myWorld.set(key, packet[key])
                 # print(packet)
                 # myWorld.world()
                 send_all_json( packet )
@@ -237,4 +240,4 @@ if __name__ == "__main__":
         gunicorn -k flask_sockets.worker sockets:app
     '''
     # app.run()
-    os.system("gunicorn -k flask_sockets.worker socketss:app");
+    os.system("gunicorn -k flask_sockets.worker sockets:app");
