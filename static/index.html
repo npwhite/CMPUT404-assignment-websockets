@@ -276,7 +276,7 @@ function wsSetup() {
         try {
             // debug("WebSocket Recv:" + msg.data);
             //XXX: TODO What are you going to do here?
-            // var returned = JSON.parse(msg.data);
+            var returned = JSON.parse(msg.data);
             debug(returned);
         } catch (e) {
             alert("socket on message: " + e);

@@ -33,12 +33,11 @@ class Client:
         self.queue = queue.Queue()
 
     def put(self, v):
-        # print('putting...')
-        # print(v)
         self.queue.put_nowait(v)
 
     def get(self):
         return self.queue.get()
+
 
 class World:
     def __init__(self):
@@ -78,14 +77,7 @@ class World:
         return self.space
 
 myWorld = World()
-clients = []
-
-def set_listener( entity, data ):
-    ''' do something with the update ! '''
-    # myWorld.set(entity, data)
-
-myWorld.add_set_listener( set_listener )
-
+clients = list()
 
 def send_all(msg):
     for client in clients:
@@ -94,6 +86,14 @@ def send_all(msg):
 def send_all_json(obj):
     send_all( json.dumps(obj) )
 
+
+def set_listener( entity, data ):
+    ''' do something with the update ! '''
+    # myWorld.set(entity, data)
+
+myWorld.add_set_listener( set_listener )
+
+
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
@@ -101,30 +101,44 @@ def hello():
     return redirect('/static/index.html')
 
 def read_ws(ws,client):
-    '''A greenlet function that reads from the websocket and updates the world'''
-    # XXX: TODO IMPLEMENT ME
     '''A greenlet function that reads from the websocket'''
     try:
         while True:
-            data = ws.receive()
-            data_dict = json.loads(data)
-            if (data is not None):
-                # print("WS RECV: %s" % data)
-
-                name = data_dict.pop('name')
-                myWorld.set(name, data_dict)
-                #
-                # print(myWorld.world())
-                # continue
-                # packet = json.loads(myWorld.world())
-                send_all_json( myWorld.world() )
+            msg = ws.receive()
+            print("WS RECV: %s" % msg)
+            if (msg is not None):
+                packet = json.loads(msg)
+                send_all_json( packet )
             else:
-                print("fin")
                 break
-    except Exception as e:
+    except:
         '''Done'''
-        print('ERROR')
-        print(e)
+
+# def read_ws(ws,client):
+#     '''A greenlet function that reads from the websocket and updates the world'''
+#     # XXX: TODO IMPLEMENT ME
+#     '''A greenlet function that reads from the websocket'''
+#     try:
+#         while True:
+#             data = ws.receive()
+#             data_dict = json.loads(data)
+#             if (data is not None):
+#                 # print("WS RECV: %s" % data)
+#
+#                 name = data_dict.pop('name')
+#                 myWorld.set(name, data_dict)
+#                 #
+#                 # print(myWorld.world())
+#                 # continue
+#                 # packet = json.loads(myWorld.world())
+#                 send_all_json( myWorld.world() )
+#             else:
+#                 print("fin")
+#                 break
+#     except Exception as e:
+#         '''Done'''
+#         print('ERROR')
+#         print(e)
 
 
 
@@ -133,19 +147,13 @@ def read_ws(ws,client):
 # XXX: TODO IMPLEMENT ME
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
-    '''Fufill the websocket URL of /subscribe, every update notify the
-    websocket and read updates from the websocket '''
-
     client = Client()
-    print("new client")
-
     clients.append(client)
     g = gevent.spawn( read_ws, ws, client )
     try:
         while True:
             # block here
             msg = client.get()
-            print(ms)
             ws.send(msg)
     except Exception as e:# WebSocketError as e:
         print("WS Error %s" % e)
