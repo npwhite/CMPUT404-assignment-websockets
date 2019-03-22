@@ -45,22 +45,22 @@ class World:
         # we've got listeners now!
         self.listeners = list()
 
-    def add_set_listener(self, listener):
-        self.listeners.append( listener )
+    # def add_set_listener(self, listener):
+    #     self.listeners.append( listener )
 
     # entities represent the objects to be drawn, not players
     # entity name : {x:int, y:int}
-    def update(self, entity, key, value):
-        entry = self.space.get(entity,dict())
-        entry[key] = value
-        self.space[entity] = entry
-        self.update_listeners( entity )
+    # def update(self, entity, key, value):
+    #     entry = self.space.get(entity,dict())
+    #     entry[key] = value
+    #     self.space[entity] = entry
+    #     self.update_listeners( entity )
 
     def set(self, entity, data):
         self.space[entity] = data
         # TODO: un comment this
         # self.update_listeners( entity )
-        send_all(self.space)
+        # send_all(self.space)
 
     def update_listeners(self, entity):
         '''update the set listeners'''
@@ -87,11 +87,11 @@ def send_all_json(obj):
     send_all( json.dumps(obj) )
 
 
-def set_listener( entity, data ):
-    ''' do something with the update ! '''
+# def set_listener( entity, data ):
+#     ''' do something with the update ! '''
     # myWorld.set(entity, data)
 
-myWorld.add_set_listener( set_listener )
+# myWorld.add_set_listener( set_listener )
 
 
 @app.route('/')
@@ -105,15 +105,25 @@ def read_ws(ws,client):
     try:
         while True:
             msg = ws.receive()
-            print("WS RECV: %s" % msg)
+            # print("WS RECV: %s" % msg)
             if (msg is not None):
                 packet = json.loads(msg)
+                # name = packet.pop('name')
+                # world[name] = packet
+                myWorld.set(packet['name'], packet)
+                # print(packet)
+                # myWorld.world()
                 send_all_json( packet )
+                # TODO: update World
+                # TODO: send to listeners
+                # print(packet)
+                # print(myWorld.world())
+                # send_all_json(myWorld.world())
             else:
                 break
-    except:
+    except Exception as e:
         '''Done'''
-
+        print(e)
 # def read_ws(ws,client):
 #     '''A greenlet function that reads from the websocket and updates the world'''
 #     # XXX: TODO IMPLEMENT ME
@@ -204,18 +214,19 @@ def update(entity):
 @app.route("/world", methods=['POST','GET'])
 def world():
     '''you should probably return the world here'''
-    return myWorld.world()
+    return jsonify(myWorld.space)
 
 @app.route("/entity/<entity>")
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
-    return None
+    return jsonify(myWorld.get(entity))
 
 
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
-    return None
+    myWorld.clear()
+    return jsonify(myWorld.space)
 
 
 
@@ -225,4 +236,5 @@ if __name__ == "__main__":
         and run
         gunicorn -k flask_sockets.worker sockets:app
     '''
-    app.run()
+    # app.run()
+    os.system("gunicorn -k flask_sockets.worker socketss:app");
