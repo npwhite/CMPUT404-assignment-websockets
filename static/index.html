@@ -126,20 +126,12 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: send a Request that updates the entity you just modified!
-    // socket.send({'hello':'mate'});
-    // data['name'] = entity
-    debug(entity);
+    // debug(entity);
     packet = {}
     packet[entity] = data
     socket.send(JSON.stringify(packet));
-
-    // reference
-    // var url = "../entity/"+entity;
-    // var request = new Request(url, {method: 'PUT', body: JSON.stringify(data)});
-    // var promise1 = fetch(request)
-
-
 }
+
 var counter = 0;
 function addEntityWithoutName(data) {
     var name = "X"+(counter++)%100;
@@ -244,17 +236,64 @@ mouse = (function() {
 
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
+var rand_offset_max = 20;
+var rand_radius_max = 20;
+var metronome = 0;
+var duration = 16711680;
+var operator = 1;
+var increment = 200;
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    // https://www.w3schools.com/jsref/jsref_random.asp
+    // random number between 1 and 10
+    // let rand1 = Math.floor((Math.random() * rand_offset_max) + 1);
+    // let rand2 = Math.floor((Math.random() * rand_offset_max) + 1);
+    let rand1 = 0;
+    let rand2 = 0;
+    addEntityWithoutName({'x':x+rand1,'y':y+rand2,'colour':'blue'});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    // https://www.w3schools.com/jsref/jsref_random.asp
+    // random number between 1 and 10
+    // let rand1 = Math.floor((Math.random() * rand_offset_max) + 1);
+    // let rand2 = Math.floor((Math.random() * rand_offset_max) + 1);
+    let rand1 = 0;
+    let rand2 = 0;
+    duration = 16711680;
+    addEntityWithoutName({'x':x+rand1,'y':y+rand2,'colour':'red'});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    // https://www.w3schools.com/jsref/jsref_random.asp
+    // random number between 1 and 10
+
+    // metronome reduced clutter, cuts drawing rate in half
+    if (metronome === 0) {
+        let rand1 = Math.floor((Math.random() * rand_offset_max) + 1);
+        let rand2 = Math.floor((Math.random() * rand_offset_max) + 1);
+        let rand_radius = Math.floor((Math.random() * rand_radius_max) + 1);
+        if (duration >= 16777215) {
+            // duration = 16711680;
+            operator = 0;
+        } else if (duration <= 16711680) {
+            operator = 1;
+
+        }
+
+        let color = '#' + duration.toString(16).toUpperCase();
+        // debug(color);
+        addEntityWithoutName({'x':x+rand1,'y':y+rand2,'colour':color,
+                              'radius':rand_radius});
+        metronome++;
+        if (operator === 1) {
+            duration = duration + increment;
+        } else {
+            duration = duration - increment;
+        }
+    }else {
+        metronome=0;
+    }
+
 });
 
 

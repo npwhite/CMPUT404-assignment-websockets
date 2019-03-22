@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 import flask
 from flask import Flask, request, redirect
 from flask_sockets import Sockets
@@ -23,21 +24,9 @@ import json
 import os
 from flask import jsonify
 
-
 app = Flask(__name__)
 sockets = Sockets(app)
 app.debug = True
-
-class Client:
-    def __init__(self):
-        self.queue = queue.Queue()
-
-    def put(self, v):
-        self.queue.put_nowait(v)
-
-    def get(self):
-        return self.queue.get()
-
 
 class World:
     def __init__(self):
@@ -47,14 +36,6 @@ class World:
 
     # def add_set_listener(self, listener):
     #     self.listeners.append( listener )
-
-    # entities represent the objects to be drawn, not players
-    # entity name : {x:int, y:int}
-    # def update(self, entity, key, value):
-    #     entry = self.space.get(entity,dict())
-    #     entry[key] = value
-    #     self.space[entity] = entry
-    #     self.update_listeners( entity )
 
     def set(self, entity, data):
         self.space[entity] = data
@@ -75,9 +56,19 @@ class World:
 
     def world(self):
         return self.space
+# ----------------------------------------------------------------------------------------
+# Citation:
+# https://github.com/uofa-cmput404/cmput404-slides/blob/master/examples/WebSocketsExamples/chat.py
+# Contributors: hazelybell, abramhindle
+class Client:
+    def __init__(self):
+        self.queue = queue.Queue()
 
-myWorld = World()
-clients = list()
+    def put(self, v):
+        self.queue.put_nowait(v)
+
+    def get(self):
+        return self.queue.get()
 
 def send_all(msg):
     for client in clients:
@@ -85,20 +76,6 @@ def send_all(msg):
 
 def send_all_json(obj):
     send_all( json.dumps(obj) )
-
-
-# def set_listener( entity, data ):
-#     ''' do something with the update ! '''
-    # myWorld.set(entity, data)
-
-# myWorld.add_set_listener( set_listener )
-
-
-@app.route('/')
-def hello():
-    '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    # return None
-    return redirect('/static/index.html')
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket'''
@@ -108,58 +85,38 @@ def read_ws(ws,client):
             # print("WS RECV: %s" % msg)
             if (msg is not None):
                 packet = json.loads(msg)
-                print(packet)
-                # name = packet.pop('name')
-                # world[name] = packet
-                # myWorld.set(packet['name'], packet)
                 key = list(packet.keys())[0]
                 myWorld.set(key, packet[key])
-                # print(packet)
-                # myWorld.world()
                 send_all_json( packet )
-                # TODO: update World
-                # TODO: send to listeners
-                # print(packet)
-                # print(myWorld.world())
-                # send_all_json(myWorld.world())
             else:
                 break
     except Exception as e:
         '''Done'''
         print(e)
-# def read_ws(ws,client):
-#     '''A greenlet function that reads from the websocket and updates the world'''
-#     # XXX: TODO IMPLEMENT ME
-#     '''A greenlet function that reads from the websocket'''
-#     try:
-#         while True:
-#             data = ws.receive()
-#             data_dict = json.loads(data)
-#             if (data is not None):
-#                 # print("WS RECV: %s" % data)
-#
-#                 name = data_dict.pop('name')
-#                 myWorld.set(name, data_dict)
-#                 #
-#                 # print(myWorld.world())
-#                 # continue
-#                 # packet = json.loads(myWorld.world())
-#                 send_all_json( myWorld.world() )
-#             else:
-#                 print("fin")
-#                 break
-#     except Exception as e:
-#         '''Done'''
-#         print('ERROR')
-#         print(e)
+
+# ----------------------------------------------------------------------------------------
+
+myWorld = World()
+clients = list()
 
 
+# def set_listener( entity, data ):
+#     ''' do something with the update ! '''
+    # myWorld.set(entity, data)
+# myWorld.add_set_listener( set_listener )
 
-    #return None
+@app.route('/')
+def hello():
+    '''Return something coherent here.. perhaps redirect to /static/index.html '''
+    return redirect('/static/index.html')
 
-# XXX: TODO IMPLEMENT ME
+
+# Citation:
+# https://github.com/uofa-cmput404/cmput404-slides/blob/master/examples/WebSocketsExamples/chat.py
+# Contributors: hazelybell, abramhindle
 @sockets.route('/subscribe')
 def subscribe_socket(ws):
+    # XXX: Implemented
     client = Client()
     clients.append(client)
     g = gevent.spawn( read_ws, ws, client )
@@ -174,8 +131,6 @@ def subscribe_socket(ws):
         clients.remove(client)
         gevent.kill(g)
 
-    # return jsonify({'test':'HELLO'})
-
 
 # I give this to you, this is how you get the raw body/data portion of a post in flask
 # this should come with flask but whatever, it's not my project.
@@ -189,30 +144,24 @@ def flask_post_json():
     else:
         return json.loads(request.form.keys()[0])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# --------------------------------
+# old routes - mostly unused
+# --------------------------------
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-    return None
+    if request.method == "POST":
+        # update an entity
+        myWorld.set(entity, flask_post_json())
+        return jsonify(myWorld.get(entity))
+
+    elif request.method == "PUT":
+        # post a new entitiy
+        myWorld.set(entity, flask_post_json())
+        return jsonify(myWorld.get(entity))
+
+    else:
+        return "METHOD NOT SUPPORTED"
 
 @app.route("/world", methods=['POST','GET'])
 def world():
@@ -224,13 +173,11 @@ def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
     return jsonify(myWorld.get(entity))
 
-
 @app.route("/clear", methods=['POST','GET'])
 def clear():
     '''Clear the world out!'''
     myWorld.clear()
     return jsonify(myWorld.space)
-
 
 
 if __name__ == "__main__":
@@ -239,5 +186,4 @@ if __name__ == "__main__":
         and run
         gunicorn -k flask_sockets.worker sockets:app
     '''
-    # app.run()
     os.system("gunicorn -k flask_sockets.worker sockets:app");
