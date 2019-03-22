@@ -127,8 +127,9 @@ function addEntity(entity, data) {
     drawNextFrame(); // (but should we?)
     //XXX: send a Request that updates the entity you just modified!
     // socket.send({'hello':'mate'});
+    data['name'] = entity
     socket.send(JSON.stringify(data));
-    debug(JSON.stringify(data));
+    // debug(entity);
 
     // reference
     // var url = "../entity/"+entity;
@@ -273,8 +274,10 @@ function wsSetup() {
     };
     socket.onmessage = function(msg) {
         try {
-            debug("WebSocket Recv:" + msg.data);
+            // debug("WebSocket Recv:" + msg.data);
             //XXX: TODO What are you going to do here?
+            // var returned = JSON.parse(msg.data);
+            debug(returned);
         } catch (e) {
             alert("socket on message: " + e);
         }

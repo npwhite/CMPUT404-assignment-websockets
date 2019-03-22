@@ -33,6 +33,8 @@ class Client:
         self.queue = queue.Queue()
 
     def put(self, v):
+        # print('putting...')
+        # print(v)
         self.queue.put_nowait(v)
 
     def get(self):
@@ -57,7 +59,9 @@ class World:
 
     def set(self, entity, data):
         self.space[entity] = data
-        self.update_listeners( entity )
+        # TODO: un comment this
+        # self.update_listeners( entity )
+        send_all(self.space)
 
     def update_listeners(self, entity):
         '''update the set listeners'''
@@ -78,17 +82,17 @@ clients = []
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
-    myWorld.set(entity, data)
+    # myWorld.set(entity, data)
 
 myWorld.add_set_listener( set_listener )
 
 
-# def send_all(msg):
-#     for client in clients:
-#         client.put( msg )
-#
-# def send_all_json(obj):
-#     send_all( json.dumps(obj) )
+def send_all(msg):
+    for client in clients:
+        client.put( msg )
+
+def send_all_json(obj):
+    send_all( json.dumps(obj) )
 
 @app.route('/')
 def hello():
@@ -102,17 +106,25 @@ def read_ws(ws,client):
     '''A greenlet function that reads from the websocket'''
     try:
         while True:
-            msg = ws.receive()
-            print("WS RECV: %s" % msg)
-            if (msg is not None):
-                continue
-                # packet = json.loads(msg)
-                # send_all_json( packet )
+            data = ws.receive()
+            data_dict = json.loads(data)
+            if (data is not None):
+                # print("WS RECV: %s" % data)
+
+                name = data_dict.pop('name')
+                myWorld.set(name, data_dict)
+                #
+                # print(myWorld.world())
+                # continue
+                # packet = json.loads(myWorld.world())
+                send_all_json( myWorld.world() )
             else:
                 print("fin")
                 break
-    except:
+    except Exception as e:
         '''Done'''
+        print('ERROR')
+        print(e)
 
 
 
@@ -125,18 +137,19 @@ def subscribe_socket(ws):
     websocket and read updates from the websocket '''
 
     client = Client()
+    print("new client")
+
     clients.append(client)
     g = gevent.spawn( read_ws, ws, client )
     try:
         while True:
             # block here
-            print("what")
             msg = client.get()
+            print(ms)
             ws.send(msg)
     except Exception as e:# WebSocketError as e:
         print("WS Error %s" % e)
     finally:
-        print("no")
         clients.remove(client)
         gevent.kill(g)
 
